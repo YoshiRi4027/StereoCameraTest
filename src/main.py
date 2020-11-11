@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+## Look at here https://answers.ros.org/question/305589/depth-image-from-rectified-stereo-images-or-disparity-image/
 import sys
 import roslib
 import rospy
@@ -7,6 +8,7 @@ from sensor_msgs.msg import Image, CameraInfo
 import message_filters
 from cv_bridge import CvBridge, CvBridgeError
 
+import numpy as np
 import cv2
 
 # assuming monocular image
@@ -38,12 +40,18 @@ class stereo_rectifier:
 
     except CvBridgeError as e:
         print(e)
-    print("creating stereo image")
-    ## Stereo Creation
-    #stereo = cv2.StereoBM_create(numDisparities=16, blockSize=15)
-    #depth = stereo.compute(cv_image_left_new, cv_image_right_new)
+
+    # get camera info
+    Kl = np.array(lcam_info.K).reshape([3,3])
+    Kr = np.array(rcam_info.K).reshape([3,3])
+    Dl = np.array(lcam_info.D)
+    Dr = np.array(rcam_info.D)
+    print("creating stereo image",Dl)
+    
+    ## Undistort with fisheye image: https://docs.opencv.org/3.4/db/d58/group__calib3d__fisheye.html
+    undistorted_left = cv2.fisheye.undistortImage(cv_image_left,Kl,Dl[:4])
     print("showing depth image")
-    cv2.imshow("Image window", cv_image_left)
+    cv2.imshow("Image window", undistorted_left)
     cv2.waitKey(3)
 
     """ do not publish now
