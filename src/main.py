@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import sys
 import roslib
 import rospy
 from std_msgs.msg import String
@@ -22,15 +22,15 @@ class stereo_rectifier:
     
     print("Create subscribers for each topic")
     self.left = message_filters.Subscriber(self.__sub_lcam_name+"/image_raw", Image)
-    self.left_caminfo = message_filters.Subscriber(self.__sub_lcam_name+"/camera_info", Image)
+    self.left_caminfo = message_filters.Subscriber(self.__sub_lcam_name+"/camera_info", CameraInfo)
     self.right = message_filters.Subscriber(self.__sub_rcam_name+"/image_raw", Image)
-    self.right_caminfo = message_filters.Subscriber(self.__sub_rcam_name+"/camera_info", Image)
+    self.right_caminfo = message_filters.Subscriber(self.__sub_rcam_name+"/camera_info", CameraInfo)
     print("Create sync filter. Use exact or approximate as appropriate.")
     self.ts = message_filters.ApproximateTimeSynchronizer([self.left, self.left_caminfo, self.right, self.right_caminfo], queue_size=5, slop=0.1)
     print("Registering callback")
     self.ts.registerCallback(self.callback)
 
-  def callback(self,left,lcam_info,right,lcam_info):
+  def callback(self,left,lcam_info,right,rcam_info):
     try:
         # assuming monocular image
         cv_image_left = self.bridge.imgmsg_to_cv2(left, "mono8")
