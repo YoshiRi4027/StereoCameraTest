@@ -15,13 +15,18 @@ import cv2
 class stereo_rectifier:
 
   def __init__(self):
-    self.image_pub = rospy.Publisher("depth",Image,queue_size=5)
-
     self.bridge = CvBridge()
 
     self.__sub_lcam_name = rospy.get_param('~sub_leftcamera_name', "/stereo/left")
     self.__sub_rcam_name = rospy.get_param('~sub_rightcamera_name', "/stereo/right")
     
+    # publisher
+    self.image_publ = rospy.Publisher(self.__sub_lcam_name+"/image_rect",Image,queue_size=5)
+    self.image_pubr = rospy.Publisher(self.__sub_rcam_name+"/image_rect",Image,queue_size=5)
+    self.caminfo_publ = rospy.Publisher(self.__sub_lcam_name+"/rect/camera_info",CameraInfo,queue_size=5)
+    self.caminfo_pubr = rospy.Publisher(self.__sub_rcam_name+"/rect/camera_info",CameraInfo,queue_size=5)
+
+
     print("Create subscribers for each topic")
     self.left = message_filters.Subscriber(self.__sub_lcam_name+"/image_raw", Image)
     self.left_caminfo = message_filters.Subscriber(self.__sub_lcam_name+"/camera_info", CameraInfo)
@@ -46,20 +51,27 @@ class stereo_rectifier:
     Kr = np.array(rcam_info.K).reshape([3,3])
     Dl = np.array(lcam_info.D)
     Dr = np.array(rcam_info.D)
-    print("creating stereo image",Dl)
     
     ## Undistort with fisheye image: https://docs.opencv.org/3.4/db/d58/group__calib3d__fisheye.html
-    undistorted_left = cv2.fisheye.undistortImage(cv_image_left,Kl,Dl[:4])
-    print("showing depth image")
-    cv2.imshow("Image window", undistorted_left)
-    cv2.waitKey(3)
+    undistorted_l = cv2.fisheye.undistortImage(cv_image_left,Kl,Dl[:4],Knew=Kl)
+    undistorted_r = cv2.fisheye.undistortImage(cv_image_right,Kr,Dr[:4],Knew=Kr)
+    #print("showing depth image")
+    #cv2.imshow("Image window", undistorted_left)
+    #cv2.waitKey(3)
 
-    """ do not publish now
+    # Camera Info 再発行
+    New_infol = lcam_info
+    New_infor = rcam_info
+    
+    # Publish
     try:
-      self.image_pub.publish(self.bridge.cv2_to_imgmsg(depth, "16SC1"))
+      self.image_publ.publish(self.bridge.cv2_to_imgmsg(undistorted_l, "mono8"))
+      self.image_pubr.publish(self.bridge.cv2_to_imgmsg(undistorted_r, "mono8"))
+      self.caminfo_publ.publish(New_infol)
+      self.caminfo_pubr.publish(New_infor)
     except CvBridgeError as e:
       print(e)
-    """
+    
 
 
 def main(args):
