@@ -62,6 +62,13 @@ class stereo_rectifier:
     # Camera Info 再発行
     New_infol = lcam_info
     New_infor = rcam_info
+
+    # Baselineの情報がないので仕方なく http://official-rtab-map-forum.67519.x6.nabble.com/Slam-using-Intel-RealSense-tracking-camera-T265-td6333.html から計算
+    Tx = 0.064138
+    fx = Kr[0,0]
+    p14 = - Tx * fx
+    New_infor.P[3] = p14
+    
     
     # Publish
     try:
